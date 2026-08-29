@@ -1,14 +1,19 @@
 """Do the classical pipeline and Cellpose agree marshmallow-by-marshmallow,
 or do their errors merely cancel in the total?"""
+import os, sys
 import numpy as np
 from PIL import Image
 from scipy.optimize import linear_sum_assignment
-from _common import IMAGE
+from _common import IMAGE, ROOT
 from count import segment
 
 RADIUS = 15.0
 
-cp = np.loadtxt("cellpose_points.csv", delimiter=",", skiprows=1)   # x,y
+CSV = os.path.join(ROOT, "cellpose_points.csv")
+if not os.path.exists(CSV):
+    sys.exit("cellpose_points.csv not found — run cellpose_count.py first "
+             "(requires the optional cellpose install; see requirements.txt)")
+cp = np.loadtxt(CSV, delimiter=",", skiprows=1)                     # x,y
 g = np.array(Image.open(IMAGE).convert("L"))
 _, cent, _, n = segment(g, 175, 14)
 cl = np.column_stack([cent[:, 1], cent[:, 0]])                      # x,y

@@ -7,7 +7,8 @@ __pycache__/
 overlay.png
 segments.png
 cellpose_overlay.png
-cellpose_points.csv
+# cellpose_points.csv is versioned: agreement.py needs it, and regenerating
+# means installing cellpose + a 1.2GB checkpoint
 
 # built artifact — regenerate with build_clicker.py
 clicker.html
