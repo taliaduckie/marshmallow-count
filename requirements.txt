@@ -1,0 +1,9 @@
+numpy
+scipy
+scikit-image
+pillow
+matplotlib
+
+# optional: independent ML cross-check (cellpose_count.py only)
+# pulls torch (~1GB) and downloads a 1.2GB checkpoint on first run
+# cellpose

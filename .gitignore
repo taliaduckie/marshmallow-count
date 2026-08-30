@@ -1,0 +1,16 @@
+# environment
+.venv/
+__pycache__/
+*.pyc
+
+# generated outputs — rerun count.py / cellpose_count.py to regenerate
+overlay.png
+segments.png
+cellpose_overlay.png
+cellpose_points.csv
+
+# built artifact — regenerate with build_clicker.py
+clicker.html
+
+# hand-count exports land here when you want them versioned; keep the real one
+!hand_count.csv

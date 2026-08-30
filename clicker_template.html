@@ -1,0 +1,506 @@
+<title>Marshmallow Count — manual verification</title>
+<style>
+/* ---- tokens: light is the bare :root ---- */
+:root{
+  --ground:#E4E6E9;      /* cool steel */
+  --surface:#F6F7F8;
+  --surface-2:#ECEEF0;
+  --line:#CDD2D7;
+  --line-soft:#DDE1E5;
+  --ink:#14181D;
+  --ink-2:#4A545F;
+  --ink-3:#79848F;
+  --accent:#E8471B;      /* scorch */
+  --marker:#00A88F;      /* instrument aqua, darkened for light ground */
+  --marker-dot:#00E0C6;  /* on-canvas, always vivid */
+  --auto:#C8860A;
+  --auto-dot:#FFC53D;
+  --done:rgba(0,168,143,.13);
+  --shadow:0 1px 2px rgba(20,24,29,.08),0 8px 24px rgba(20,24,29,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1114;
+    --surface:#171B20;
+    --surface-2:#1F242A;
+    --line:#2C333A;
+    --line-soft:#232930;
+    --ink:#E7EAED;
+    --ink-2:#A2ACB6;
+    --ink-3:#6E7A85;
+    --accent:#FF6A3D;
+    --marker:#22E0C0;
+    --marker-dot:#00E0C6;
+    --auto:#FFC53D;
+    --auto-dot:#FFC53D;
+    --done:rgba(34,224,192,.10);
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1114; --surface:#171B20; --surface-2:#1F242A;
+  --line:#2C333A; --line-soft:#232930;
+  --ink:#E7EAED; --ink-2:#A2ACB6; --ink-3:#6E7A85;
+  --accent:#FF6A3D; --marker:#22E0C0; --marker-dot:#00E0C6;
+  --auto:#FFC53D; --auto-dot:#FFC53D;
+  --done:rgba(34,224,192,.10);
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font:400 14px/1.5 -apple-system,BlinkMacSystemFont,"Helvetica Neue",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  height:100vh; overflow:hidden;
+}
+.mono{font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+
+/* ---- shell ---- */
+#app{display:grid;grid-template-columns:288px 1fr;height:100vh}
+#rail{
+  background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;min-height:0;
+}
+#stage{position:relative;min-width:0;overflow:hidden;background:var(--ground)}
+canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
+canvas.panning{cursor:grabbing}
+
+/* ---- rail sections ---- */
+.sec{padding:16px 18px;border-bottom:1px solid var(--line-soft);display:flex;flex-direction:column;gap:12px}
+.sec.grow{flex:1;min-height:0;overflow-y:auto;gap:2px;padding-top:12px}
+.eyebrow{
+  font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);margin:0;
+}
+
+/* headline count */
+.count-wrap{display:flex;align-items:baseline;gap:10px}
+#total{
+  font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;
+  font-size:52px;line-height:.9;font-weight:600;letter-spacing:-.03em;color:var(--ink);
+}
+#total.bump{animation:bump .18s ease-out}
+@keyframes bump{0%{transform:scale(1)}45%{transform:scale(1.07)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){#total.bump{animation:none}}
+.count-sub{font-size:12px;color:var(--ink-3);line-height:1.35}
+
+/* deltas */
+.deltas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.delta{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:7px;padding:8px 10px}
+.delta .k{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.delta .v{font-size:17px;font-weight:600;margin-top:3px;
+  font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+.pos{color:var(--marker)} .neg{color:var(--accent)}
+
+/* ledger */
+.ledger{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12.5px}
+.row .lab{color:var(--ink-2);display:flex;align-items:center;gap:7px}
+.row .val{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;font-weight:600}
+.swatch{width:9px;height:9px;border-radius:50%;flex:none}
+.sw-keep{background:var(--marker)}
+.sw-auto{background:transparent;border:2px solid var(--auto);width:11px;height:11px}
+.sw-add{background:var(--accent)}
+
+/* buttons */
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+button{
+  font:inherit;font-size:12px;font-weight:500;color:var(--ink);
+  background:var(--surface-2);border:1px solid var(--line);border-radius:6px;
+  padding:6px 10px;cursor:pointer;transition:background .12s,border-color .12s;
+}
+button:hover{background:var(--line-soft);border-color:var(--ink-3)}
+button:focus-visible{outline:2px solid var(--marker);outline-offset:2px}
+button.on{background:var(--marker);border-color:var(--marker);color:var(--surface)}
+button.danger:hover{border-color:var(--accent);color:var(--accent)}
+
+/* cell list */
+.cell{
+  display:grid;grid-template-columns:26px 1fr auto auto;align-items:center;gap:9px;
+  padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;
+  border:1px solid transparent;
+}
+.cell:hover{background:var(--surface-2)}
+.cell.active{border-color:var(--marker)}
+.cell.done{background:var(--done)}
+.cell .idx{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px;color:var(--ink-3)}
+.cell .n{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;
+  font-weight:600;color:var(--ink-2)}
+.cell .tick{width:15px;height:15px;border:1.5px solid var(--line);border-radius:4px;flex:none;
+  display:grid;place-items:center;font-size:10px;color:transparent}
+.cell.done .tick{background:var(--marker);border-color:var(--marker);color:var(--surface)}
+.cell.done .name{color:var(--ink-2)}
+
+/* stage chrome */
+.hud{
+  position:absolute;left:14px;bottom:14px;display:flex;gap:6px;align-items:center;
+  background:color-mix(in srgb,var(--surface) 88%,transparent);
+  border:1px solid var(--line);border-radius:8px;padding:5px 8px;
+  box-shadow:var(--shadow);backdrop-filter:blur(8px);
+}
+.hud .z{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11.5px;color:var(--ink-2);
+  min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.hint{
+  position:absolute;right:14px;bottom:14px;max-width:330px;
+  background:color-mix(in srgb,var(--surface) 88%,transparent);
+  border:1px solid var(--line);border-radius:8px;padding:9px 12px;
+  font-size:11.5px;line-height:1.55;color:var(--ink-2);box-shadow:var(--shadow);backdrop-filter:blur(8px);
+}
+.hint b{color:var(--ink);font-weight:600}
+kbd{
+  font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:10.5px;
+  background:var(--surface-2);border:1px solid var(--line);border-bottom-width:2px;
+  border-radius:4px;padding:1px 4px;color:var(--ink)
+}
+.hint.hidden,.hud.hidden{display:none}
+
+@media (max-width:820px){
+  #app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  #rail{border-right:none;border-bottom:1px solid var(--line);max-height:44vh;overflow-y:auto}
+  .hint{display:none}
+}
+</style>
+
+<div id="app">
+  <aside id="rail">
+    <div class="sec">
+      <p class="eyebrow">Confirmed count</p>
+      <div class="count-wrap">
+        <span id="total" class="mono">0</span>
+        <span class="count-sub">marshmallows<br>on the sheet</span>
+      </div>
+      <div class="deltas">
+        <div class="delta">
+          <div class="k">vs hand count 484</div>
+          <div class="v" id="d484">—</div>
+        </div>
+        <div class="delta">
+          <div class="k">vs watershed 507</div>
+          <div class="v" id="dauto">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <p class="eyebrow">Ledger</p>
+      <div class="ledger">
+        <div class="row"><span class="lab"><i class="swatch sw-auto"></i>Detector, untouched</span><span class="val mono" id="nAuto">0</span></div>
+        <div class="row"><span class="lab"><i class="swatch sw-add"></i>You added</span><span class="val mono" id="nAdd">0</span></div>
+        <div class="row"><span class="lab"><i class="swatch sw-keep"></i>You deleted</span><span class="val mono" id="nDel">0</span></div>
+      </div>
+      <div class="btns">
+        <button id="bUndo">Undo</button>
+        <button id="bReload">Reload detections</button>
+        <button id="bClear" class="danger">Clear all</button>
+        <button id="bExport">Export CSV</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <p class="eyebrow">View</p>
+      <div class="btns">
+        <button id="bGrid" class="on">Grid</button>
+        <button id="bMarks" class="on">Markers</button>
+        <button id="bNums" class="on">Cell counts</button>
+        <button id="bFit">Fit</button>
+      </div>
+    </div>
+
+    <div class="sec grow">
+      <p class="eyebrow" style="margin-bottom:8px">Sweep progress · <span id="doneN" class="mono">0</span>/24 cells</p>
+      <div id="cells"></div>
+    </div>
+  </aside>
+
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div class="hud">
+      <button id="bOut">−</button>
+      <span class="z mono" id="zlab">100%</span>
+      <button id="bIn">+</button>
+    </div>
+    <div class="hint" id="hint">
+      <b>Click empty space</b> to add a marker · <b>click a marker</b> to delete it · <b>drag</b> to pan · <b>scroll</b> to zoom.<br>
+      Work cell by cell; press <kbd>D</kbd> to tick the cell under your cursor as done.
+      <kbd>H</kbd> hides markers so you can see the photo clean. <kbd>0</kbd> fits. <kbd>?</kbd> hides this.
+    </div>
+  </div>
+</div>
+
+<script>
+/*__DATA__*/
+
+/* ---------- state ---------- */
+const GC = 6, GR = 4, NCELL = GC*GR;          // 6x4 grid ≈ 20 marshmallows a cell
+const HIT = 11;                                // click-to-marker hit radius, image px
+const KEY = 'mallow-count-v1';
+
+let pts = [];            // {x,y,src:'auto'|'add'}
+let done = new Array(NCELL).fill(false);
+let deleted = 0;
+let undoStack = [];
+let showGrid = true, showMarks = true, showNums = true, showHint = true;
+let hoverCell = -1;
+
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let scale = 1, tx = 0, ty = 0;                 // view transform
+const img = new Image();
+
+/* ---------- persistence ---------- */
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify({pts,done,deleted})); }catch(e){}
+}
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY)||'null');
+    if(s && Array.isArray(s.pts)){ pts=s.pts; done=s.done||done; deleted=s.deleted||0; return true; }
+  }catch(e){}
+  return false;
+}
+function seed(){
+  pts = AUTO_PTS.map(p=>({x:p[0],y:p[1],src:'auto'}));
+  done = new Array(NCELL).fill(false); deleted = 0; undoStack = [];
+}
+
+/* ---------- geometry ---------- */
+function cellOf(x,y){
+  const c = Math.min(GC-1, Math.max(0, Math.floor(x/(IMG_W/GC))));
+  const r = Math.min(GR-1, Math.max(0, Math.floor(y/(IMG_H/GR))));
+  return r*GC+c;
+}
+function cellRect(i){
+  const c=i%GC, r=(i/GC)|0, w=IMG_W/GC, h=IMG_H/GR;
+  return {x:c*w,y:r*h,w,h};
+}
+function cellName(i){
+  const c=i%GC, r=(i/GC)|0;
+  return String.fromCharCode(65+r) + (c+1);
+}
+function toImg(px,py){
+  const r = cv.getBoundingClientRect();
+  return { x:(px-r.left-tx)/scale, y:(py-r.top-ty)/scale };
+}
+
+/* ---------- view ---------- */
+function fit(){
+  const r = cv.getBoundingClientRect();
+  const pad = 28;
+  scale = Math.min((r.width-pad*2)/IMG_W, (r.height-pad*2)/IMG_H);
+  tx = (r.width - IMG_W*scale)/2;
+  ty = (r.height - IMG_H*scale)/2;
+  draw();
+}
+function zoomAt(px,py,f){
+  const r = cv.getBoundingClientRect();
+  const cx = px-r.left, cy = py-r.top;
+  const ns = Math.min(14, Math.max(0.12, scale*f));
+  tx = cx-(cx-tx)*(ns/scale); ty = cy-(cy-ty)*(ns/scale);
+  scale = ns; draw();
+}
+function resize(){
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio||1;
+  cv.width = Math.max(1,Math.round(r.width*dpr));
+  cv.height= Math.max(1,Math.round(r.height*dpr));
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+
+/* ---------- draw ---------- */
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function draw(){
+  const r = cv.getBoundingClientRect();
+  ctx.clearRect(0,0,r.width,r.height);
+  ctx.save(); ctx.translate(tx,ty); ctx.scale(scale,scale);
+  ctx.imageSmoothingEnabled = scale < 3;
+  ctx.drawImage(img,0,0,IMG_W,IMG_H);
+
+  // done-cell wash + grid
+  if(showGrid){
+    for(let i=0;i<NCELL;i++){
+      const q = cellRect(i);
+      if(done[i]){ ctx.fillStyle='rgba(0,224,198,.13)'; ctx.fillRect(q.x,q.y,q.w,q.h); }
+      if(i===hoverCell){ ctx.fillStyle='rgba(255,255,255,.05)'; ctx.fillRect(q.x,q.y,q.w,q.h); }
+    }
+    ctx.lineWidth = 1.25/scale; ctx.strokeStyle = 'rgba(255,255,255,.42)';
+    ctx.setLineDash([7/scale,5/scale]);
+    for(let c=1;c<GC;c++){const x=c*IMG_W/GC;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,IMG_H);ctx.stroke();}
+    for(let rr=1;rr<GR;rr++){const y=rr*IMG_H/GR;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(IMG_W,y);ctx.stroke();}
+    ctx.setLineDash([]);
+  }
+
+  // markers
+  if(showMarks){
+    const rad = 5.2/Math.max(scale,.35), lw = 2/Math.max(scale,.35);
+    for(const p of pts){
+      ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.2832);
+      if(p.src==='auto'){
+        ctx.strokeStyle='#FFC53D'; ctx.lineWidth=lw; ctx.stroke();
+      }else{
+        ctx.fillStyle='#FF5A34'; ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=lw*.6; ctx.stroke();
+      }
+    }
+  }
+
+  // per-cell tally
+  if(showNums && showGrid){
+    const counts = new Array(NCELL).fill(0);
+    for(const p of pts) counts[cellOf(p.x,p.y)]++;
+    const fs = 15/scale;
+    ctx.font = `600 ${fs}px ui-monospace,"SF Mono",Menlo,monospace`;
+    ctx.textBaseline='top';
+    for(let i=0;i<NCELL;i++){
+      const q=cellRect(i), pad=6/scale, label=cellName(i)+' · '+counts[i];
+      const w=ctx.measureText(label).width;
+      ctx.fillStyle='rgba(10,13,16,.72)';
+      ctx.fillRect(q.x+pad,q.y+pad,w+pad*1.6,fs+pad*1.2);
+      ctx.fillStyle= done[i] ? '#00E0C6' : '#F2F4F6';
+      ctx.fillText(label,q.x+pad*1.8,q.y+pad*1.6);
+    }
+  }
+  ctx.restore();
+  document.getElementById('zlab').textContent = Math.round(scale*100)+'%';
+}
+
+/* ---------- ui sync ---------- */
+function stats(){
+  let a=0,m=0;
+  for(const p of pts){ p.src==='auto'?a++:m++; }
+  return {a,m,total:pts.length};
+}
+function sync(){
+  const s = stats();
+  const t = document.getElementById('total');
+  if(t.textContent !== String(s.total)){
+    t.textContent = s.total; t.classList.remove('bump'); void t.offsetWidth; t.classList.add('bump');
+  }
+  const d1 = s.total-484, d2 = s.total-507;
+  const f = (v)=> (v>0?'+':'')+v;
+  const e1=document.getElementById('d484'), e2=document.getElementById('dauto');
+  e1.textContent=f(d1); e1.className='v '+(d1>=0?'pos':'neg');
+  e2.textContent=f(d2); e2.className='v '+(d2>=0?'pos':'neg');
+  document.getElementById('nAuto').textContent=s.a;
+  document.getElementById('nAdd').textContent=s.m;
+  document.getElementById('nDel').textContent=deleted;
+  document.getElementById('doneN').textContent=done.filter(Boolean).length;
+
+  const counts=new Array(NCELL).fill(0);
+  for(const p of pts) counts[cellOf(p.x,p.y)]++;
+  const host=document.getElementById('cells');
+  for(let i=0;i<NCELL;i++){
+    const el=host.children[i];
+    el.className='cell'+(done[i]?' done':'')+(i===hoverCell?' active':'');
+    el.querySelector('.n').textContent=counts[i];
+  }
+  save();
+}
+function buildCells(){
+  const host=document.getElementById('cells');
+  host.innerHTML='';
+  for(let i=0;i<NCELL;i++){
+    const el=document.createElement('div');
+    el.className='cell';
+    el.innerHTML=`<span class="idx">${cellName(i)}</span><span class="name">cell</span>`+
+                 `<span class="n mono">0</span><span class="tick">✓</span>`;
+    el.addEventListener('click',()=>{ done[i]=!done[i]; sync(); draw(); });
+    el.addEventListener('mouseenter',()=>{ hoverCell=i; sync(); draw(); });
+    el.addEventListener('mouseleave',()=>{ hoverCell=-1; sync(); draw(); });
+    host.appendChild(el);
+  }
+}
+
+/* ---------- edit ---------- */
+function pushUndo(){ undoStack.push(JSON.stringify({pts,deleted})); if(undoStack.length>120) undoStack.shift(); }
+function undo(){
+  const s=undoStack.pop(); if(!s) return;
+  const o=JSON.parse(s); pts=o.pts; deleted=o.deleted; sync(); draw();
+}
+function hitIndex(x,y){
+  let best=-1, bd=HIT*HIT;
+  for(let i=0;i<pts.length;i++){
+    const dx=pts[i].x-x, dy=pts[i].y-y, d=dx*dx+dy*dy;
+    if(d<bd){ bd=d; best=i; }
+  }
+  return best;
+}
+function clickAt(px,py){
+  const p=toImg(px,py);
+  if(p.x<0||p.y<0||p.x>IMG_W||p.y>IMG_H) return;
+  pushUndo();
+  const i=hitIndex(p.x,p.y);
+  if(i>=0){ if(pts[i].src==='auto') deleted++; pts.splice(i,1); }
+  else pts.push({x:+p.x.toFixed(1),y:+p.y.toFixed(1),src:'add'});
+  sync(); draw();
+}
+
+/* ---------- input ---------- */
+let dragging=false, moved=0, lx=0, ly=0;
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);
+  dragging=true; moved=0; lx=e.clientX; ly=e.clientY;
+});
+cv.addEventListener('pointermove',e=>{
+  const p=toImg(e.clientX,e.clientY);
+  const hc = (p.x>=0&&p.y>=0&&p.x<=IMG_W&&p.y<=IMG_H) ? cellOf(p.x,p.y) : -1;
+  if(hc!==hoverCell){ hoverCell=hc; sync(); }
+  if(!dragging){ draw(); return; }
+  const dx=e.clientX-lx, dy=e.clientY-ly;
+  moved += Math.abs(dx)+Math.abs(dy);
+  if(moved>4){ tx+=dx; ty+=dy; cv.classList.add('panning'); }
+  lx=e.clientX; ly=e.clientY; draw();
+});
+cv.addEventListener('pointerup',e=>{
+  dragging=false; cv.classList.remove('panning');
+  if(moved<=4) clickAt(e.clientX,e.clientY);
+});
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  zoomAt(e.clientX,e.clientY, e.deltaY<0 ? 1.14 : 1/1.14);
+},{passive:false});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); return; }
+  const k=e.key.toLowerCase();
+  if(k==='d'&&hoverCell>=0){ done[hoverCell]=!done[hoverCell]; sync(); draw(); }
+  else if(k==='g'){ showGrid=!showGrid; document.getElementById('bGrid').classList.toggle('on',showGrid); draw(); }
+  else if(k==='h'){ showMarks=!showMarks; document.getElementById('bMarks').classList.toggle('on',showMarks); draw(); }
+  else if(k==='0'){ fit(); }
+  else if(k==='='||k==='+'){ const r=cv.getBoundingClientRect(); zoomAt(r.left+r.width/2,r.top+r.height/2,1.25); }
+  else if(k==='-'){ const r=cv.getBoundingClientRect(); zoomAt(r.left+r.width/2,r.top+r.height/2,1/1.25); }
+  else if(k==='?'||k==='/'){ showHint=!showHint; document.getElementById('hint').classList.toggle('hidden',!showHint); }
+});
+
+/* ---------- buttons ---------- */
+const $=id=>document.getElementById(id);
+$('bUndo').onclick=undo;
+$('bReload').onclick=()=>{ if(confirm('Replace all markers with the 507 detector markers? Your edits are lost.')){ pushUndo(); seed(); sync(); draw(); } };
+$('bClear').onclick=()=>{ if(confirm('Remove every marker and start from an empty sheet?')){ pushUndo(); pts=[]; deleted=0; sync(); draw(); } };
+$('bFit').onclick=fit;
+$('bIn').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,1.25)};
+$('bOut').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,1/1.25)};
+$('bGrid').onclick=()=>{showGrid=!showGrid;$('bGrid').classList.toggle('on',showGrid);draw()};
+$('bMarks').onclick=()=>{showMarks=!showMarks;$('bMarks').classList.toggle('on',showMarks);draw()};
+$('bNums').onclick=()=>{showNums=!showNums;$('bNums').classList.toggle('on',showNums);draw()};
+$('bExport').onclick=()=>{
+  const s=stats();
+  let out='# marshmallow manual count\n';
+  out+=`# total,${s.total}\n# from_detector,${s.a}\n# added_by_hand,${s.m}\n# detector_markers_deleted,${deleted}\n`;
+  out+=`# cells_reviewed,${done.filter(Boolean).length}/${NCELL}\n`;
+  out+='x,y,source,cell\n';
+  for(const p of pts) out+=`${p.x},${p.y},${p.src},${cellName(cellOf(p.x,p.y))}\n`;
+  const b=new Blob([out],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b); a.download='marshmallow_manual_count.csv'; a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+/* ---------- go ---------- */
+buildCells();
+if(!load()) seed();
+img.onload=()=>{ resize(); fit(); sync(); };
+img.src = IMG_DATA;
+addEventListener('resize',resize);
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',draw);
+</script>
