@@ -104,6 +104,8 @@ def main():
     ap.add_argument("image", nargs="?", default="marshmallows.png")
     ap.add_argument("--overlay", default="overlay.png")
     ap.add_argument("--segments", default="segments.png")
+    ap.add_argument("--render", nargs=2, type=int, metavar=("THRESH", "MIN_DIST"),
+                    help="render images at this config instead of the sweep-median one")
     args = ap.parse_args()
 
     gray = np.array(Image.open(args.image).convert("L"))
@@ -140,9 +142,13 @@ def main():
     print(f"\nESTIMATE: {median}   INTERVAL: [{lo}, {hi}]")
 
     # --- images from the configuration closest to the sweep median!!! ---
-    best = min(results, key=lambda k: (abs(results[k] - median), k))
-    print(f"\nrendering images at threshold={best[0]}, min_distance={best[1]} "
-          f"(count {results[best]}, the config nearest the sweep median)")
+    if args.render:
+        best = tuple(args.render)
+        print(f"\nrendering images at threshold={best[0]}, min_distance={best[1]} (--render)")
+    else:
+        best = min(results, key=lambda k: (abs(results[k] - median), k))
+        print(f"\nrendering images at threshold={best[0]}, min_distance={best[1]} "
+              f"(count {results[best]}, the config nearest the sweep median)")
     labels, centres, n_raw, n_kept = segment(gray, *best)
     print(f"  raw watershed segments {n_raw} -> {n_kept} after dropping "
           f"fragments < {int(FRAGMENT_FRAC * 100)}% of median area "

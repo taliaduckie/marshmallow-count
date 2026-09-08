@@ -8,6 +8,8 @@ checking the answer three different ways.
 **Answer: 506.** Three methods with different failure modes agree on it, and two of
 them agree marshmallow-by-marshmallow, not just in total.
 
+![506 detections, threshold 175 / min_distance 14](overlay_506.png)
+
 | method | count | independent? |
 | --- | --- | --- |
 | watershed, sweep exactly as originally specified | 480.5, range [404, 507] | yes |
@@ -28,7 +30,9 @@ python count.py
 ```
 
 Prints the parameter sweep, and writes `overlay.png` (a dot per detection) and
-`segments.png` (watershed labels, random colormap).
+`segments.png` (watershed labels, random colormap) at the configuration nearest
+the sweep median. `--render 175 14` renders the 506 configuration instead
+(that's how `overlay_506.png` above was made, downscaled to 1000px).
 
 ## What the method actually does, and where it goes wrong
 
