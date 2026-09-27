@@ -34,7 +34,7 @@ Prints the parameter sweep, and writes `overlay.png` (a dot per marshy boi detec
 the sweep median. `--render 175 14` will render the 506 configuration instead
 (which is how `overlay_506.png` above was made but downscaled to 1000px).
 
-## What the method does, and why it still goes wrong
+## What the method does and also why it still doesn't really work
 
 **The systematic error runs low bc of `min_distance`.**
 
