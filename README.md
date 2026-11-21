@@ -124,7 +124,9 @@ and was most of the reason it made sense to me to proceed with Cellpose.
 
 ```
 pip install cellpose
-python cellpose_count.py --truth hand_count.csv
+python cellpose_count.py
+# Optional: compare against your own clicker export
+# python cellpose_count.py --truth hand_count.csv
 ```
 
 Cellpose predicts a flow vector pointing toward its object's center and then groups pixels that converge
@@ -164,3 +166,10 @@ python3 -m venv .venv
 
 `cellpose` is optional and commented out. it pulls PyTorch and downloads a 1.2GB
 checkpoint on first run. don't put it back unless you want a big boi checkpoint.
+
+The pinned baseline was verified on Python 3.12. Run
+`python -m unittest discover -s tests` to check the classical detector against
+the committed Cellpose centroids without downloading a model. This checks
+agreement, not accuracy against independent ground truth. If you rerun the
+optional Cellpose step, record the package version and checkpoint alongside the
+new centroids; the committed CSV does not identify the original checkpoint.

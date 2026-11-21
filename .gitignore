@@ -2,6 +2,7 @@
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
 
 # generated outputs — rerun count.py / cellpose_count.py to regenerate
 overlay.png
